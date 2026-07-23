@@ -145,6 +145,42 @@
   tbody tr:last-child td { border-bottom: 0; }
   tbody tr:hover { background: var(--surface-2); }
 
+  .searchwrap { position: relative; max-width: 520px; }
+  .searchwrap input {
+    width: 100%; box-sizing: border-box; font: inherit; font-size: 15px; color: var(--ink);
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 11px 14px;
+  }
+  .searchwrap input:focus { outline: 2px solid var(--kl); outline-offset: 1px; }
+  .searchwrap input::placeholder { color: var(--ink-3); }
+  .sresults {
+    position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 6px);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.16); max-height: 380px; overflow-y: auto; display: none;
+  }
+  .sresults button {
+    display: flex; justify-content: space-between; gap: 12px; align-items: baseline;
+    width: 100%; text-align: left; border: 0; background: transparent; color: var(--ink);
+    font: inherit; font-size: 13.5px; padding: 9px 13px; cursor: pointer; border-bottom: 1px solid var(--line);
+  }
+  .sresults button:last-child { border-bottom: 0; }
+  .sresults button:hover, .sresults button:focus-visible { background: var(--surface-2); outline: none; }
+  .sresults .sn { font-weight: 600; }
+  .sresults .sd { color: var(--ink-3); font-size: 12px; font-weight: 400; }
+  .sresults .sm { color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 12.5px; }
+  .sresults .none { padding: 10px 13px; color: var(--ink-3); font-size: 13px; }
+  .proj { margin-top: 22px; display: none; }
+  .proj .phead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+  .proj h3 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+  .proj .psub { color: var(--ink-2); font-size: 13.5px; }
+  .proj .pstats { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+  .pstat { background: var(--surface-2); border: 1px solid var(--line); border-radius: 7px; padding: 8px 13px; }
+  .pstat .k { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  .pstat .v { font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .listwrap { max-height: 460px; overflow-y: auto; }
+  .listwrap thead th { position: sticky; top: 0; }
+  .proj a.lst { color: var(--kl); text-decoration: none; font-weight: 600; }
+  .proj a.lst:hover { text-decoration: underline; }
+  .seg-pill { display: inline-block; font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
   .foot { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 12.5px; max-width: 75ch; }
   .foot p { margin: 6px 0; }
   a { color: var(--kl); }
@@ -160,6 +196,16 @@
 
     <div class="tiles" id="tiles"></div>
   </header>
+
+  <section>
+    <h2>Find a building</h2>
+    <p class="secnote">Search 5,730 condos, apartments and residences by name — e.g. "The Era", "Arte Cheras" — to see every active listing and its going rates.</p>
+    <div class="searchwrap">
+      <input id="psearch" type="search" placeholder="Building or project name…" autocomplete="off" aria-label="search buildings">
+      <div class="sresults" id="sresults" role="listbox"></div>
+    </div>
+    <div class="proj" id="proj"></div>
+  </section>
 
   <section>
     <h2>Median rent by district</h2>
@@ -336,6 +382,104 @@
     });
   }
   render();
+
+  // ---- building / project search ----
+  const $s = document.getElementById('psearch');
+  const $r = document.getElementById('sresults');
+  const $p = document.getElementById('proj');
+  let PIDX = null, idxFail = false;
+
+  async function loadIndex() {
+    if (PIDX || idxFail) return PIDX;
+    try {
+      const res = await fetch('projects-index.json');
+      if (!res.ok) throw new Error(res.status);
+      PIDX = (await res.json()).projects;
+    } catch (e) {
+      idxFail = true;
+      $r.innerHTML = '<div class="none">Couldn\'t load the building index — this search only works on the deployed site.</div>';
+      $r.style.display = 'block';
+    }
+    return PIDX;
+  }
+  $s.addEventListener('focus', loadIndex);
+
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+
+  function renderResults(q) {
+    if (!PIDX) return;
+    q = q.trim().toLowerCase();
+    if (q.length < 2) { $r.style.display = 'none'; return; }
+    const hits = PIDX.filter(p => p.n.toLowerCase().includes(q) || p.d && p.d.toLowerCase().includes(q)).slice(0, 12);
+    $r.innerHTML = hits.length ? hits.map(p => `
+      <button role="option" data-slug="${p.s}">
+        <span><span class="sn">${esc(p.n)}</span><br><span class="sd">${esc(p.d || '')}, ${p.g === 'Kuala Lumpur' ? 'KL' : 'Selangor'} · ${p.c} unit${p.c === 1 ? '' : 's'}${p.cr ? ' · ' + p.cr + ' rooms' : ''}</span></span>
+        <span class="sm">${p.m ? 'RM ' + p.m.toLocaleString() + ' med' : ''}</span>
+      </button>`).join('') : '<div class="none">No building matches — try a shorter fragment of the name.</div>';
+    $r.style.display = 'block';
+  }
+  $s.addEventListener('input', () => renderResults($s.value));
+  $s.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { const b = $r.querySelector('button'); if (b) b.click(); }
+    if (e.key === 'Escape') $r.style.display = 'none';
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.searchwrap')) $r.style.display = 'none';
+  });
+  $r.addEventListener('click', e => {
+    const b = e.target.closest('button[data-slug]');
+    if (b) { $r.style.display = 'none'; openProject(b.dataset.slug); }
+  });
+
+  const fmtDate = t => t ? new Date(t * 1000).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+
+  async function openProject(slug) {
+    let d;
+    try {
+      const res = await fetch(`projects/${slug}.json`);
+      if (!res.ok) throw new Error(res.status);
+      d = await res.json();
+    } catch (e) {
+      $p.innerHTML = '<p class="secnote">Couldn\'t load that building\'s data.</p>';
+      $p.style.display = 'block';
+      return;
+    }
+    history.replaceState(null, '', '#b=' + slug);
+    const u = d.units, r = d.rooms;
+    const bedRows = bedOrder.filter(c => d.beds[c]).map(c => {
+      const s = d.beds[c];
+      return `<tr><td>${c === 'Studio' ? 'Studio' : c + ' bed'}</td><td>${s.count}</td><td><b>${s.median.toLocaleString()}</b></td><td>${s.p25.toLocaleString()} – ${s.p75.toLocaleString()}</td><td>${s.min.toLocaleString()} – ${s.max.toLocaleString()}</td></tr>`;
+    }).join('');
+    $p.innerHTML = `
+      <div class="phead">
+        <h3>${esc(d.name)}</h3>
+        <span class="psub"><span class="dot ${d.region === 'Kuala Lumpur' ? 'kl' : 'sel'}"></span>${esc(d.district || '')}, ${d.region} · ${u ? u.count + ' unit listings' : ''}${r ? (u ? ' · ' : '') + r.count + ' room listings' : ''}</span>
+      </div>
+      <div class="pstats">
+        ${u ? `<div class="pstat"><div class="k">Median · unit</div><div class="v">RM ${u.median.toLocaleString()}/mo</div></div>
+        <div class="pstat"><div class="k">Middle 50%</div><div class="v">RM ${u.p25.toLocaleString()} – ${u.p75.toLocaleString()}</div></div>` : ''}
+        ${r ? `<div class="pstat"><div class="k">Median · room</div><div class="v">RM ${r.median.toLocaleString()}/mo</div></div>` : ''}
+      </div>
+      ${bedRows ? `<div class="tablewrap" style="margin-bottom:16px"><table><thead><tr><th>Bedrooms</th><th>Listings</th><th>Median</th><th>Middle 50%</th><th>Range</th></tr></thead><tbody>${bedRows}</tbody></table></div>` : ''}
+      <div class="tablewrap listwrap"><table>
+        <thead><tr><th>Layout</th><th>Baths</th><th>Sqft</th><th>Area</th><th>Rent / mo</th><th>Listed</th><th></th></tr></thead>
+        <tbody>${d.listings.map(l => `
+          <tr>
+            <td>${l.seg === 'room' ? '<span class="seg-pill">Room</span>' : esc(l.b ?? '?')}</td>
+            <td>${l.ba || ''}</td>
+            <td>${l.fa ? l.fa.toLocaleString() : ''}</td>
+            <td style="text-align:left">${esc(l.a || '')}</td>
+            <td><b>${l.p.toLocaleString()}</b></td>
+            <td style="white-space:nowrap">${fmtDate(l.t)}</td>
+            <td><a class="lst" href="${esc(l.u)}" target="_blank" rel="noopener">View →</a></td>
+          </tr>`).join('')}</tbody>
+      </table></div>`;
+    $p.style.display = 'block';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (location.hash.startsWith('#b=')) openProject(location.hash.slice(3));
+  });
 
   // ---- neighbourhood extremes ----
   const areas = D.areas_unit.slice().sort((a, b) => b.median - a.median);
