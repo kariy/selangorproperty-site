@@ -181,6 +181,11 @@
   .proj a.lst { color: var(--kl); text-decoration: none; font-weight: 600; }
   .proj a.lst:hover { text-decoration: underline; }
   .seg-pill { display: inline-block; font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
+  th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+  th.sortable::after { content: ' ↕'; opacity: .45; }
+  th.sortable.asc::after { content: ' ↑'; opacity: 1; }
+  th.sortable.desc::after { content: ' ↓'; opacity: 1; }
+  th.sortable:hover { color: var(--ink); }
   .foot { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 12.5px; max-width: 75ch; }
   .foot p { margin: 6px 0; }
   a { color: var(--kl); }
@@ -462,18 +467,39 @@
       </div>
       ${bedRows ? `<div class="tablewrap" style="margin-bottom:16px"><table><thead><tr><th>Bedrooms</th><th>Listings</th><th>Median</th><th>Middle 50%</th><th>Range</th></tr></thead><tbody>${bedRows}</tbody></table></div>` : ''}
       <div class="tablewrap listwrap"><table>
-        <thead><tr><th>Layout</th><th>Baths</th><th>Sqft</th><th>Area</th><th>Rent / mo</th><th>Listed</th><th></th></tr></thead>
-        <tbody>${d.listings.map(l => `
-          <tr>
-            <td>${l.seg === 'room' ? '<span class="seg-pill">Room</span>' : esc(l.b ?? '?')}</td>
-            <td>${l.ba || ''}</td>
-            <td>${l.fa ? l.fa.toLocaleString() : ''}</td>
-            <td style="text-align:left">${esc(l.a || '')}</td>
-            <td><b>${l.p.toLocaleString()}</b></td>
-            <td style="white-space:nowrap">${fmtDate(l.t)}</td>
-            <td><a class="lst" href="${esc(l.u)}" target="_blank" rel="noopener">View →</a></td>
-          </tr>`).join('')}</tbody>
+        <thead><tr><th>Layout</th><th>Baths</th>
+          <th class="sortable" data-key="fa">Sqft</th><th>Area</th>
+          <th class="sortable asc" data-key="p">Rent / mo</th>
+          <th class="sortable" data-key="t">Listed</th><th></th></tr></thead>
+        <tbody id="plist"></tbody>
       </table></div>`;
+    // listing sort: click Sqft / Rent / Listed headers to toggle asc/desc.
+    // Default = rent ascending, whole units before rooms.
+    let sortKey = 'p', sortDir = 1, segGroup = true;
+    const rowsHtml = () => {
+      const ls = d.listings.slice().sort((a, b) =>
+        (segGroup ? (a.seg === 'room') - (b.seg === 'room') : 0) ||
+        ((a[sortKey] ?? 0) - (b[sortKey] ?? 0)) * sortDir);
+      return ls.map(l => `
+        <tr>
+          <td>${l.seg === 'room' ? '<span class="seg-pill">Room</span>' : esc(l.b ?? '?')}</td>
+          <td>${l.ba || ''}</td>
+          <td>${l.fa ? l.fa.toLocaleString() : ''}</td>
+          <td style="text-align:left">${esc(l.a || '')}</td>
+          <td><b>${l.p.toLocaleString()}</b></td>
+          <td style="white-space:nowrap">${fmtDate(l.t)}</td>
+          <td><a class="lst" href="${esc(l.u)}" target="_blank" rel="noopener">View →</a></td>
+        </tr>`).join('');
+    };
+    document.getElementById('plist').innerHTML = rowsHtml();
+    $p.querySelectorAll('th.sortable').forEach(th => th.addEventListener('click', () => {
+      const k = th.dataset.key;
+      if (sortKey === k) { sortDir = -sortDir; } else { sortKey = k; sortDir = k === 't' ? -1 : 1; }
+      segGroup = k === 'p' && sortDir === 1;  // grouping only in the default view
+      $p.querySelectorAll('th.sortable').forEach(x => x.classList.remove('asc', 'desc'));
+      th.classList.add(sortDir === 1 ? 'asc' : 'desc');
+      document.getElementById('plist').innerHTML = rowsHtml();
+    }));
     $p.style.display = 'block';
   }
 
