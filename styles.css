@@ -178,7 +178,29 @@
   .foot p { margin: 6px 0; }
   a { color: var(--kl); }
   @media (prefers-reduced-motion: no-preference) { .bar { transition: width .25s ease; } }
-  .topnav { display: flex; gap: 20px; margin-bottom: 30px; font-size: 13.5px; }
-  .topnav a { color: var(--ink-2); text-decoration: none; padding-bottom: 2px; }
-  .topnav a:hover { color: var(--ink); }
-  .topnav a[aria-current="page"] { color: var(--ink); font-weight: 650; border-bottom: 2px solid var(--kl); }
+  .masthead {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .mastin {
+    max-width: 1060px; margin: 0 auto; padding: 0 24px; height: 54px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); min-width: 0; }
+  .brand .mark { display: inline-flex; }
+  .brand .mark i { width: 13px; height: 13px; border-radius: 50%; display: inline-block; }
+  .brand .mark i.kl { background: var(--kl); }
+  .brand .mark i.sel { background: var(--sel); margin-left: -5px; mix-blend-mode: multiply; }
+  :root[data-theme="dark"] .brand .mark i.sel { mix-blend-mode: screen; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .brand .mark i.sel { mix-blend-mode: screen; }
+  }
+  .brand .bt { font-size: 14.5px; letter-spacing: -0.01em; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .brand .bt b { color: var(--ink); font-weight: 700; }
+  .topnav { display: flex; gap: 4px; font-size: 13.5px; }
+  .topnav a { color: var(--ink-2); text-decoration: none; padding: 5px 12px; border-radius: 999px; }
+  .topnav a:hover { color: var(--ink); background: var(--surface-2); }
+  .topnav a[aria-current="page"] { color: var(--ink); font-weight: 650; background: var(--surface-2); border: 1px solid var(--line); padding: 4px 11px; }
+  .wrap { padding-top: 34px; }
