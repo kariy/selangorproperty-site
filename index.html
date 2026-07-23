@@ -178,8 +178,8 @@
   .pstat .v { font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums; }
   .listwrap { max-height: 460px; overflow-y: auto; }
   .listwrap thead th { position: sticky; top: 0; }
-  .proj a.lst { color: var(--kl); text-decoration: none; font-weight: 600; }
-  .proj a.lst:hover { text-decoration: underline; }
+  .proj a.lst { color: var(--kl); text-decoration: none; font-weight: 600; font-size: 17px; line-height: 1; padding: 0 6px; }
+  .proj a.lst:hover { color: var(--ink); }
   .seg-pill { display: inline-block; font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
   th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
   th.sortable::after { content: ' ↕'; opacity: .45; }
@@ -488,7 +488,7 @@
           <td style="text-align:left">${esc(l.a || '')}</td>
           <td><b>${l.p.toLocaleString()}</b></td>
           <td style="white-space:nowrap">${fmtDate(l.t)}</td>
-          <td><a class="lst" href="${esc(l.u)}" target="_blank" rel="noopener">View →</a></td>
+          <td><a class="lst" href="${esc(l.u)}" target="_blank" rel="noopener" aria-label="View listing on PropertyGuru">›</a></td>
         </tr>`).join('');
     };
     document.getElementById('plist').innerHTML = rowsHtml();
